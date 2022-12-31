@@ -23,6 +23,7 @@ async function run(){
     try{
         const serviceCollection = client.db('socialMedia').collection('post');
         const aboutCollection = client.db('socialMedia').collection('about');
+        const userCollection = client.db('socialMedia').collection('user');
         
 
 
@@ -31,6 +32,19 @@ async function run(){
             const user = req.body;
             console.log(user);
             const result = await serviceCollection.insertOne(user)
+            res.send(result);
+        })
+        app.post('/user', async(req, res) =>{
+            const user = req.body;
+            const query = {email: user.email}
+            const userExist = await userCollection.findOne(query)
+            if(userExist){
+                return res.send({
+                    message: 'user already Exist'
+                })
+            }
+            
+            const result = await userCollection.insertOne(user)
             res.send(result);
         })
 
@@ -46,6 +60,33 @@ async function run(){
             const service = await serviceCollection.findOne(query);
             res.send(service);
         });
+          app.patch('/post/:id', async (req, res) => {
+            const id = req.params.id;
+            const {email} = req.body;
+            const query = { _id: ObjectId(id) };
+            const service = await serviceCollection.findOne(query);
+            let doc = {}
+            if(service.likerEmails?.includes(email)){
+                doc = {
+                    $pull: {likerEmails: email} 
+                }
+            
+            }
+            else{
+                doc = {
+                    $push: {likerEmails: email} 
+                }
+            }
+            const result = await serviceCollection.updateOne(query, doc)
+            const updatedService = await serviceCollection.findOne(query);
+            result.likers = updatedService.likerEmails?.length
+            // result.didLike = updatedService.likerEmails?.includes(email)
+            
+            res.send(result);
+
+        });
+
+       
 
         // About section
 
